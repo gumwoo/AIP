@@ -1,0 +1,20 @@
+server:
+  address: 0.0.0.0
+  port: 8081
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/AIP_db}
+    username: postgres
+    password: ${DB_PW}
+  jpa:
+    show-sql: true # 개발 후 false로 변경
+    hibernate:
+      ddl-auto: update # 최초 컴파일 후 validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Seoul
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
