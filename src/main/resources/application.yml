@@ -1,12 +1,15 @@
 server:
   address: 0.0.0.0
-  port: 8081
+  port: 8080
 
 spring:
+  config:
+    import: optional:classpath:env.properties
+
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/AIP_db}
-    username: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DB_USER}
     password: ${DB_PW}
   jpa:
     show-sql: true # 개발 후 false로 변경
