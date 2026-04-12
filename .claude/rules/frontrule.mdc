@@ -1,0 +1,284 @@
+VI. 프론트엔드(React) 규칙
+6-1. 네이밍/구조
+컴포넌트 파일/컴포넌트: PascalCase (UserList.tsx, OrderDetail.tsx).
+
+변수/함수: camelCase.
+
+상수: UPPER_SNAKE_CASE.
+
+폴더 구조:
+
+페이지/도메인 기준(features/user, features/order)으로 묶는 방식을 기본으로 한다.
+
+6-2. 컴포넌트 아키텍처
+Container / Presentational 패턴
+
+Presentational: UI만 담당, 데이터는 props로 받고 렌더링만 한다.
+
+Container: 데이터 fetch, 상태 관리, 비즈니스 핸들러 담당.
+
+비즈니스 API 호출/상태를 Presentational에 섞지 않는다.
+
+커스텀 훅
+
+useUsers, useOrders 등 도메인별 커스텀 훅으로 비즈니스 상태/로직을 분리한다.
+
+Container는 커스텀 훅 + Presentational 조합으로 구성한다.
+
+API 모듈
+
+api/xxxApi.ts에 axios/fetch 호출을 모으고, 컴포넌트에서 직접 HTTP 호출하지 않는다
+
+1. React 폴더/레이어 구조 룰
+1-1. feature 기반 구조
+단순 components/, pages/ 구조 대신, 기능(도메인) 단위로 폴더를 쪼개는 걸 기본값으로 한다.
+
+text
+src/
+  app/
+    App.tsx
+    routes.tsx
+  shared/
+    components/   // 공용 버튼, 모달, 레이아웃
+    hooks/
+    lib/          // 날짜, 포맷팅 유틸
+    styles/
+  features/
+    user/
+      components/
+        UserList.tsx
+        UserDetail.tsx
+      hooks/
+        useUsers.ts
+        useUserDetail.ts
+      api/
+        userApi.ts
+      types.ts
+    order/
+      components/
+      hooks/
+      api/
+      types.ts
+룰:
+
+하나의 feature 폴더 안에 해당 도메인 코드(user, order 등)를 최대한 몰아넣는다. (컴포넌트, 훅, api, 타입 포함)
+
+/shared에는 진짜 “도메인 무관” 재사용 컴포넌트/훅만 올린다.
+
+루트 /components 같은 애매한 폴더는 피하고, “이건 어느 도메인 것인가?” 질문에 바로 답이 나오게 구조를 잡는다.
+
+1-2. 컴포넌트 레벨 분류
+features/order/components 내부는 역할별로 나누는 것을 기본 룰로 한다.
+
+pages or screens: 라우팅과 직결되는 최상위 화면 컴포넌트 (URL = Page 단위)
+
+containers: 데이터 fetch/상태 관리/라우팅 연결 담당
+
+ui or presentation: 순수 UI (스타일 + props만 받음)
+
+forms: 해당 도메인 폼 컴포넌트 모음
+
+2. 컴포넌트/Props 설계 룰
+2-1. Container / Presentational 강화
+이미 말한 패턴을 팀 룰로 못 박자:
+
+Presentational:
+
+props로만 데이터/콜백을 받는다.
+
+비즈니스 로직, fetch, 라우터 훅(useNavigate) 직접 사용 금지.
+
+Container:
+
+비즈니스/네비게이션 로직 포함.
+
+useUsers, useOrders 같은 커스텀 훅과 Presentational 조립 담당.
+
+이렇게 하면 React Query 같은 서버 상태 라이브러리 쓰더라도 Container/훅에서만 관심을 갖고, UI는 “데이터가 왔다고 가정하고” 렌더링만 하고 끝내는 구조가 된다.
+
+2-2. Props 네이밍 규칙
+boolean: is, has, can, should 프리픽스 (isOpen, hasError, canSubmit, shouldAutoFocus)
+
+핸들러: on + 동사/이벤트 (onClick, onSave, onChangeName)
+
+Presentational 컴포넌트에 setState 직접 넘기지 말고, 의도가 드러나는 핸들러로 감싸서 넘긴다.
+
+3. 상태 관리 전략 룰
+실무에서 진짜 중요한 건 “어디까지를 React 상태로 보고, 어디서부터는 서버 상태로 볼 것인지”를 팀에서 맞춰두는 것.
+
+3-1. 상태 구분
+Local UI State
+
+모달 열림 여부, 현재 탭, 인풋 값, 정렬/필터 옵션 등.
+
+useState, useReducer로 로컬하게 관리.
+
+Server State
+
+백엔드에서 오는 목록/상세/검색 결과 등.
+
+캐싱, refetch, 로딩/에러 상태를 같이 다뤄주는 서버 상태 라이브러리(React Query 등)를 사용하는 걸 기본값으로 두면 좋다.
+
+Global State
+
+로그인 사용자 정보, 토큰 정보, “앱 전역에서 필요”한 것만 전역 상태로 관리.
+
+그냥 귀찮다는 이유로 전부 전역 상태에 올리는 것 금지.
+
+룰:
+
+“이 값이 서버 데이터냐, UI 데이터냐”를 먼저 구분하고, 그에 맞는 툴을 쓴다.
+
+서버 데이터를 useState + useEffect + axios로 여기저기에서 따로 관리하지 않는다 (버그 지옥).
+
+4. API 레이어 + 에러/로딩 패턴
+4-1. API 모듈/클라이언트 규칙
+features/*/api/xxxApi.ts에 HTTP 통신을 몰아넣는다.
+
+axios.create()로 공통 인스턴스 만들어서:
+
+baseURL,
+
+공통 헤더,
+
+인터셉터(토큰 주입, 응답 에러 처리)를 한 곳에서 관리.
+
+ts
+// shared/lib/http.ts
+import axios from "axios";
+
+export const http = axios.create({
+  baseURL: "/api",
+  withCredentials: true,
+});
+
+http.interceptors.request.use((config) => {
+  // 예: Access Token 헤더 주입
+  // const token = getAccessToken();
+  // if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+ts
+// features/user/api/userApi.ts
+import { http } from "@/shared/lib/http";
+
+export async function fetchUsers() {
+  const { data } = await http.get("/users");
+  return data;
+}
+규칙: 컴포넌트에서는 http 직접 쓰지 않고, 항상 xxxApi 함수만 사용한다.
+
+4-2. 에러/로딩 UI 패턴
+에러/로딩 컴포넌트를 공통으로 만들어 사용:
+
+LoadingSpinner, ErrorMessage, EmptyState 등.
+
+서버 에러 코드가 정해져 있으면(예: UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR), 클라이언트에서
+
+토스트,
+
+모달,
+
+리다이렉트(/login)를 규칙적으로 처리.
+
+5. 프론트 보안 룰 (XSS, CSRF, 토큰)
+5-1. XSS 방지
+JSX에서 {value}로 렌더링하는 값은 React가 자동 이스케이프 → 기본적으로 안전하다.
+
+dangerouslySetInnerHTML 사용 금지를 팀 룰로 하고,
+
+꼭 써야 하면 서버나 DOMPurify 같은 라이브러리로 HTML을 sanitize한 뒤 사용.
+
+외부에서 들어오는 HTML(게시글, WYSIWYG 결과)은 “신뢰할 수 없는 데이터”로 간주하고 항상 필터링한다.
+
+5-2. CSRF
+React 자체는 CSRF 보호가 없으므로, 다음을 백엔드/프론트 협업 룰로 잡는다:
+
+상태 변경 요청(POST/PUT/PATCH/DELETE)에 CSRF 토큰을 헤더(X-CSRF-Token)로 실어보내기.
+
+쿠키를 세션/토큰 저장에 쓸 경우:
+
+HttpOnly, Secure, SameSite 속성을 적절히 설정.
+
+GET으로 상태 변경하는 API 절대 만들지 않기.
+
+5-3. 토큰 저장 위치
+가능하면 Access Token은 메모리 or 브라우저 저장소(localStorage는 조심), Refresh Token은 HttpOnly 쿠키(백엔드 컨트롤) 쪽으로 설계.
+
+프론트에서는 토큰 유출을 가정하고, XSS를 줄이기 위한 기본 룰(위의 XSS 방지)을 반드시 지킨다.
+
+6. React 성능 최적화 룰
+6-1. 언제 memoization을 쓸지
+성능 최적화는 “무조건 useMemo/useCallback 많이 쓰기”가 아니고, 비용이 큰 곳에만 쓴다는 룰을 정하는 게 중요하다.
+
+React.memo
+
+props 변화가 적고 렌더 비용이 큰 Presentational 컴포넌트에만 사용.
+
+예: 대량 리스트의 개별 아이템, 복잡한 차트 등.
+
+useCallback
+
+memoized 컴포넌트에 콜백을 넘길 때, 매 렌더마다 새 함수가 만들어져 리렌더를 유발하는 걸 방지.
+
+지나친 남발은 오히려 가독성을 떨어뜨리니, “props로 넘겨지는 콜백이 많고, 그 아래에 React.memo 컴포넌트가 있을 때만” 사용한다.
+
+useMemo
+
+정렬/필터링/집계 등 CPU 비용이 큰 계산에만 사용.
+
+단순 값 가공에는 쓰지 않는다.
+
+6-2. 코드 스플리팅 / Lazy Loading
+큰 페이지나 관리 툴 화면 등은 React.lazy + Suspense로 라우트 단위 코드 스플리팅을 적용한다.
+
+예: 관리자용 통계 페이지, 모달 안에 들어가는 무거운 에디터 컴포넌트 등을 lazy로 로드.
+
+tsx
+const AdminDashboard = React.lazy(() => import("./AdminDashboard"));
+
+<Route
+  path="/admin"
+  element={
+    <Suspense fallback={<PageSkeleton />}>
+      <AdminDashboard />
+    </Suspense>
+  }
+/>
+6-3. 리스트 렌더링
+수천 개 이상 리스트는 가상 스크롤(react-window 등)을 기본 옵션으로 고려.
+
+key는 index가 아니라 안정적인 id를 사용한다.
+
+7. 접근성(A11y) & UX 패턴
+실무에서 자주 깨지는 부분이라 룰로 못 박아두면 좋음.
+
+모든 클릭 가능한 요소는 <button>이나 role="button" + 키보드 이벤트 처리.
+
+폼 요소에는 <label htmlFor>를 명시적으로 연결.
+
+색 대비(contrast) 준수, 텍스트 크기 14px 이상, 본문 16px 기준 유지.
+
+로딩/빈 상태/에러 상태를 항상 UI로 표현:
+
+로딩: Skeleton or Spinner
+
+빈 상태: 가이드 문구 + CTA
+
+에러: 사용자 친화적인 메시지 (500 에러 메시지 그대로 노출 금지)
+
+8. 프론트 테스트 전략
+단위/컴포넌트 테스트:
+
+React Testing Library 기준으로 “사용자 관점” 테스트 작성.
+
+DOM 구조보다는 “버튼 클릭 → 텍스트 변화/요청 호출”을 검증.
+
+E2E:
+
+로그인/주요 결제/주문 플로우는 Cypress/Playwright로 E2E 최소 1~2개 시나리오 작성.
+
+API 목킹:
+
+테스트에서 실제 서버를 두지 않고, MSW 등으로 API를 목킹하는 패턴 고려.
+

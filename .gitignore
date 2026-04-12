@@ -52,3 +52,5 @@ secrets/
 log/
 
 *.log
+.gitkeep
+.claude/
